@@ -1,4 +1,5 @@
-"""Includes TimelineNode to create timelines of cash flows for visualization and PV calculation purposes"""
+"""Includes TimelineNode and PerpetuityNode to create timelines of cash flows
+for visualization and PV calculation purposes"""
 
 
 class TimelineNode(object):
