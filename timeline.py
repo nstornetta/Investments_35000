@@ -1,6 +1,7 @@
 """Includes TimelineNode and PerpetuityNode to create timelines of cash flows
 for visualization and PV calculation purposes"""
 
+# ------------------ General Timeline for PV calculations -------------------- #
 
 class TimelineNode(object):
     def __init__(self, cash, time_period):
@@ -85,3 +86,64 @@ class Timeline(object):
         pv = perpetuity_node.cash / (self.discount_rate - perpetuity_node.growth_rate)
         # second, discount pv back to being in terms of time period 0
         return pv / (1 + self.discount_rate) ** (perpetuity_node.time_period-1)
+
+
+# --------------- Bond-specific Timeline and Nodes ------------------------ #
+
+
+class BondNode(TimelineNode):
+    """The Bond Node differs from a regular node in that it has its own discount rate specific to its time period
+       because of the structure of the bond curve
+    """
+    def __init__(self, cash, time_period, discount_rate):
+        super().__init__(cash, time_period)
+        self.discount_rate = discount_rate
+
+    def __repr__(self):
+        return "{}\nCash: {} Discount Rate: {} Time Period: {}".format(self.__class__.__name__,
+                                                                       self.cash,
+                                                                       self.discount_rate,
+                                                                       self.time_period)
+
+
+class BondTimeline(Timeline):
+    """Note that for the case of bonds, the PV is equivalent to the price"""
+    def __init__(self, nodes=None, discount_rate=None):
+        super().__init__(discount_rate, nodes)
+
+        if nodes is None:
+            self.nodes = []
+        elif isinstance(nodes, list) and all([isinstance(x, BondNode) for x in nodes]):
+            self.nodes = sorted(nodes, key=lambda n: n.time_period)
+            self.update_pv()
+        else:
+            raise TypeError("nodes has to be either None or a list of BondNodes")
+
+    def __repr__(self):
+        return_string = ""
+        for node in self.nodes:
+            return_string += node.timeline_graphic
+        return_string += "\n"
+
+        # Add indication of time period for each node
+        for node in self.nodes:
+            return_string += str(node.time_period).center(len(node.timeline_graphic))
+        return_string += "\n"
+
+        # Add cash for each node
+        for node in self.nodes:
+            return_string += "C:{cash}".format(cash=node.cash).center(len(node.timeline_graphic))
+        return_string += "\n"
+
+        for node in self.nodes:
+            return_string += "r:{rate}".format(rate=node.discount_rate).center(len(node.timeline_graphic))
+
+        return return_string
+
+    def pv_node(self, node):
+        return round(node.cash/(1+node.discount_rate)**node.time_period, 2)
+
+    def update_pv(self):
+        self.pv = 0
+        for node in self.nodes:
+            self.pv += self.pv_node(node)
